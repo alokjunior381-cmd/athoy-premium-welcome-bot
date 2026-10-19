@@ -1,8 +1,13 @@
+
 import os
-import html
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.constants import ParseMode
+
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
+from telegram.constants import ChatMemberStatus
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -12,52 +17,105 @@ from telegram.ext import (
     filters,
 )
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
-TOKEN = os.environ["BOT_TOKEN"]
+BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHANNEL_ID = os.environ["CHANNEL_ID"]
 CHANNEL_LINK = os.environ["CHANNEL_LINK"]
+WEBHOOK_PATH = os.environ["WEBHOOK_PATH"].strip("/")
+WEBHOOK_SECRET = os.environ["WEBHOOK_SECRET"]
+BASE_URL = os.environ["RENDER_EXTERNAL_URL"].rstrip("/")
+PORT = int(os.environ.get("PORT", "10000"))
 
-def make_keyboard():
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton(
-            "🚀 JOIN OUR CHANNEL",
-            url=CHANNEL_LINK
-        )
-    ]])
+keyboard = InlineKeyboardMarkup([
+    [InlineKeyboardButton("📢 Join Our Channel", url=CHANNEL_LINK)]
+])
 
-def welcome(name):
-    name = html.escape(name or "বন্ধু")
-    return (
-        "✨ <b>WELCOME TO OUR COMMUNITY</b> ✨\n\n"
-        f"হ্যালো, <b>{name}</b>! ❤️\n\n"
-        "আমাদের সঙ্গে যুক্ত হওয়ার জন্য ধন্যবাদ। 🥰\n\n"
-        "💎 আমাদের চ্যানেলে নিয়মিত আপডেট পাবে।\n\n"
-        "🔥 Stay Connected • Stay Awesome!"
-    )
+WELCOME_TEXT = (
+    "🎉 <b>Welcome to ATHOY PREMIUM!</b>\n\n"
+    "❤️ আমাদের চ্যানেলে যোগ দেওয়ার জন্য ধন্যবাদ।\n"
+    "🔥 নতুন আপডেট পেতে নিচের বাটনে চাপ দাও।"
+)
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.effective_message.reply_text(
-        welcome(update.effective_user.first_name),
-        parse_mode=ParseMode.HTML,
-        reply_markup=make_keyboard()
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            WELCOME_TEXT,
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+
+
+async def private_message(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            "👋 ধন্যবাদ! আমাদের চ্যানেলে যোগ দিতে নিচের বাটনে চাপ দাও।",
+            reply_markup=keyboard,
+        )
+
+
+async def member_update(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    change = update.chat_member
+    if not change:
+        return
+
+    old_status = change.old_chat_member.status
+    new_status = change.new_chat_member.status
+
+    joined_statuses = {
+        ChatMemberStatus.MEMBER,
+        ChatMemberStatus.ADMINISTRATOR,
+        ChatMemberStatus.OWNER,
+    }
+
+    if old_status not in joined_statuses and new_status in joined_statuses:
+        user = change.new_chat_member.user
+        name = user.full_name.replace("<", "&lt;").replace(">", "&gt;")
+
+        message = (
+            f"🎉 <b>নতুন সদস্যকে স্বাগতম!</b>\n\n"
+            f"👤 নাম: {name}\n"
+            f"📢 ATHOY PREMIUM চ্যানেলে স্বাগতম ❤️"
+        )
+
+        await context.bot.send_message(
+            chat_id=CHANNEL_ID,
+            text=message,
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
+
+
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(
+        MessageHandler(filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND,
+                       private_message)
+    )
+    app.add_handler(
+        ChatMemberHandler(member_update, ChatMemberHandler.CHAT_MEMBER)
     )
 
-async def auto_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await start(update, context)
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=WEBHOOK_PATH,
+        webhook_url=f"{BASE_URL}/{WEBHOOK_PATH}",
+        secret_token=WEBHOOK_SECRET,
+        allowed_updates=["message", "chat_member"],
+    )
 
-async def member_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    event = update.chat_member
-    if not event or event.chat.type != "channel":
-        return
 
-    old = event.old_chat_member.status
-    new = event.new_chat_member.status
-
-    if old not in ("left", "kicked"):
-        return
-    if new not in ("member", "administrator", "creator"):
-        return
-
-    user = event.new_chat_member.user
-    if user.is_bot
+if __name__ == "__main__":
+    main()
