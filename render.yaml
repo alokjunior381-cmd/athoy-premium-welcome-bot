@@ -1,0 +1,15 @@
+
+services:
+  - type: worker
+    name: athoy-premium-welcome-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: CHANNEL_ID
+        sync: false
+      - key: CHANNEL_LINK
+        sync: false
