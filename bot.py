@@ -37,7 +37,7 @@ keyboard = InlineKeyboardMarkup([
 ])
 
 WELCOME_TEXT = (
-    "🎉 <b>Welcome to ATHOY PREMIUM!</b>\n\n"
+    "🎉 <b>Welcome to HOT VIRAL LINK VEDIO!</b>\n\n"
     "❤️ আমাদের চ্যানেলে যোগ দেওয়ার জন্য ধন্যবাদ।\n"
     "🔥 নতুন আপডেট পেতে নিচের বাটনে চাপ দাও।"
 )
@@ -90,7 +90,7 @@ async def member_update(
         message = (
             f"🎉 <b>নতুন সদস্যকে স্বাগতম!</b>\n\n"
             f"👤 নাম: {name}\n"
-            f"📢 ATHOY PREMIUM চ্যানেলে স্বাগতম ❤️"
+            f"📢 HOT VIRAL LINK VEDIO চ্যানেলে স্বাগতম ❤️"
         )
 
         await context.bot.send_message(
