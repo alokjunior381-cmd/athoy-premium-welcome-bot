@@ -8,6 +8,7 @@ from telegram import (
     InlineKeyboardMarkup,
 )
 from telegram.constants import ChatMemberStatus
+from telegram.request import HTTPXRequest
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -79,7 +80,12 @@ async def member_update(
 
     if old_status not in joined_statuses and new_status in joined_statuses:
         user = change.new_chat_member.user
-        name = user.full_name.replace("<", "&lt;").replace(">", "&gt;")
+        name = (
+            user.full_name
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
 
         message = (
             f"🎉 <b>নতুন সদস্যকে স্বাগতম!</b>\n\n"
@@ -96,12 +102,26 @@ async def member_update(
 
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    request = HTTPXRequest(
+        connect_timeout=30,
+        read_timeout=30,
+        write_timeout=30,
+        pool_timeout=30,
+    )
+
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .request(request)
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(
-        MessageHandler(filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND,
-                       private_message)
+        MessageHandler(
+            filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND,
+            private_message,
+        )
     )
     app.add_handler(
         ChatMemberHandler(member_update, ChatMemberHandler.CHAT_MEMBER)
@@ -114,6 +134,7 @@ def main():
         webhook_url=f"{BASE_URL}/{WEBHOOK_PATH}",
         secret_token=WEBHOOK_SECRET,
         allowed_updates=["message", "chat_member"],
+        bootstrap_retries=-1,
     )
 
 
