@@ -1,6 +1,6 @@
 
 services:
-  - type: worker
+  - type: web
     name: athoy-premium-welcome-bot
     runtime: python
     plan: free
@@ -12,4 +12,8 @@ services:
       - key: CHANNEL_ID
         sync: false
       - key: CHANNEL_LINK
+        sync: false
+      - key: WEBHOOK_PATH
+        sync: false
+      - key: WEBHOOK_SECRET
         sync: false
